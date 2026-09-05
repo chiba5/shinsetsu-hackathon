@@ -47,11 +47,22 @@ AtomS3R ──POST /submit──▶ PC: server.py（OpenAI で画像生成）◀
                                     └── ブラウザ /gallery（プロジェクタ・保険）
 ```
 
-```bash
+```powershell
+# PowerShell（Windows 標準）。&& は使えないので 1 行ずつ
+cd ~/work/shinsetsu-hackathon
 python server.py --dry     # API を呼ばずに動作確認（Pillow があれば文字入りの代替画像）
 python server.py           # 本番。OPENAI_API_KEY を環境変数に入れておく
 python test_server.py      # 口を一通り叩く自動テスト（dry）
 ```
+
+別のターミナルから手で投げる（PowerShell の `curl` は別物なので使わない）:
+
+```powershell
+python submit.py A "暇だったので　真夜中に　パリで　従順な犬が　全力で　ラーメンを食べた"
+python submit.py B --random          # words.json からランダムに 1 文
+```
+
+ブラウザで http://localhost:8000/ を開いておくと 3 秒以内に出る。
 
 ### 接点（ここだけ合わせれば合体できる）
 
