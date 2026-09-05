@@ -40,6 +40,41 @@ python imagegen.py "暇だったので　真夜中に　パリで　従順な犬
 - 受け取る側はスキャンで名札を読み、RSSI がしきい値以上なら上のルールで 1 語取る
 - 同じ相手からは 1 回だけ（MAC で重複排除）。完成後は無視
 
+## 広場サーバ（文章 → 画像 → 表示）
+
+```
+AtomS3R ──POST /submit──▶ PC: server.py（OpenAI で画像生成）◀──GET /latest.json, /image/N.jpg── Tab5
+                                    └── ブラウザ /gallery（プロジェクタ・保険）
+```
+
+```bash
+python server.py --dry     # API を呼ばずに動作確認（Pillow があれば文字入りの代替画像）
+python server.py           # 本番。OPENAI_API_KEY を環境変数に入れておく
+python test_server.py      # 口を一通り叩く自動テスト（dry）
+```
+
+### 接点（ここだけ合わせれば合体できる）
+
+| 口 | 使う側 | 内容 |
+|---|---|---|
+| `POST /submit` | AtomS3R | `{"device":"A","sentence":"暇だったので　真夜中に　…"}` または `{"device":"A","words":["…",…]}`。即 `{"id":12,"status":"queued"}` |
+| `GET /latest.json` | Tab5 / ブラウザ | `{"latest_id":12,"items":[{id,device,sentence,status,image},…]}`（新しい順 20 件）|
+| `GET /image/12.jpg` | Tab5 / ブラウザ | 生成画像 JPEG 1024×1024（100〜200 KB）|
+| `GET /` | ブラウザ | 広場ページ。3 秒ごと自動更新 |
+
+- AtomS3R 側のコードは `firmware/atom_post.ino`（`postSentence()` を完成時に 1 回呼ぶだけ）
+- 同じデバイスから同じ文が 60 秒以内に来たら同じ id を返す（再送しても二重生成しない）
+- 生成は 10〜30 秒。`status` が `queued → working → done`（失敗は `error`）
+
+### 当日の合体手順
+
+1. スマホのテザリングを ON。PC・AtomS3R・Tab5 を全部それにつなぐ
+2. PC で `python server.py`。`ipconfig` で IPv4 アドレスを確認（例 `192.168.43.12`）
+3. スマホのブラウザで `http://<IP>:8000/` が開くか確認（開かなければ Windows ファイアウォールで Python を許可）
+4. `firmware/atom_post.ino` の SSID / PASS / SERVER を書き換えてファームに混ぜる
+5. AtomS3R で文章を完成 → サーバの画面に `[queue] #1 A: …` が出る → 数十秒後 `[done]`
+6. ブラウザ / Tab5 に出る
+
 ## 語句表の書き方
 
 `words.json` の `slots` は並び順のまま文章になる。`key` は固定（ファーム側と一致させる）、
